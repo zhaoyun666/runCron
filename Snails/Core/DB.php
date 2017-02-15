@@ -6,7 +6,7 @@
  * 增加文件缓存
  *
  */
-namespace Core;
+namespace Snails\Core;
 
 class DB {
 	/*

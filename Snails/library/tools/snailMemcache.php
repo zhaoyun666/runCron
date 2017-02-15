@@ -11,7 +11,7 @@
  * @author: zhaozhao911@yahoo.com
  * @version:
  */
-namespace runCron\library\tools;
+namespace Snails\library\tools;
 class snailMemcache extends \Memcache{
     
 	private $memcache;
@@ -152,6 +152,10 @@ class snailMemcache extends \Memcache{
 		foreach ($servers as $val) {
 			$this->memcache->addServer($val[0], $val[1]);
 		}
+	}
+	public static function initMemcache($servers)
+	{
+	    
 	}
 }
 ?>

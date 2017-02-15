@@ -1,5 +1,5 @@
 <?php
-namespace Core;
+namespace Snails\Core;
 class Snail{
 	
 	/**

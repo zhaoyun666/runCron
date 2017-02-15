@@ -19,8 +19,12 @@ $InitConfig = [
 				],
 		],
 		'redis' => [
+		    'server1' => [
+		        'host' => '192.168.2.117',
+		        'port' => '6379',
+		    ]
 		],
 		'memcache' => [			
 		],
-		'errorPath' => ROOTDIR . 'cache/error/',
+		'errorPath' => ROOTDIR . 'app/cache/error/',
 ];
