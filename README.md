@@ -17,4 +17,4 @@
 	    |  |  |——snailMongo.php
 		|——config
 	  	|  |——comm.conf.php 配置文件
-		|——run.php //入口文件
+		|——index.php //入口文件
