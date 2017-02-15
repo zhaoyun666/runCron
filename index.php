@@ -1,18 +1,19 @@
 <?php
-use Core\Snail;
+use Snails\Core\Snail;
 define("DS", DIRECTORY_SEPARATOR);
 define("ROOTDIR", dirname(__FILE__) . DS);
 define("APPNAME", 'app');
 define("MODULES" , 'modules');
 define("MODULE_EXT", 'Module');
 define("DB_KEY", 'db');
+define("REDIS_KEY", 'redis');
 error_reporting(1);
 
 /**
  * load autoloader
  */
-if (file_exists(ROOTDIR . 'vendor/autoload.php')) {
-	require ROOTDIR . 'vendor/autoload.php';
+if (file_exists(ROOTDIR . 'Snails/vendor/autoload.php')) {
+	require ROOTDIR . 'Snails/vendor/autoload.php';
 } else {
 	throw new Exception('Load Class File not Found!');
 }

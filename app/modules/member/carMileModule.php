@@ -1,6 +1,6 @@
 <?php
 namespace app\modules\member;
-use library\dao\clw2\MemberDao;
+use Snails\library\dao\clw2\MemberDao;
 
 class carMileModule{
 	

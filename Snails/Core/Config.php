@@ -1,5 +1,5 @@
 <?php
-namespace Core;
+namespace Snails\Core;
 class Config{
 	
 	public static function getConfig($path): array{
