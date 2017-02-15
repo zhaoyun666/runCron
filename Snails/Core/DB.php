@@ -112,7 +112,7 @@ class DB {
 	 * @date: 2016-8-21 下午6:21:36
 	 * @author: zhaoce@linewin.cc
 	 */
-	public function insert($table, $data)
+	public function insert($table, $data): int
 	{
 		if(empty($data) || empty($table)) return false;
 		$field = join(',', array_keys($data));
@@ -164,7 +164,7 @@ class DB {
 	/*
 	 * 获取多条数据
 	 */
-	public function fetch($sql, $dataType)
+	public function fetch($sql, $dataType): array
 	{
 		$res = self::query($sql);
 		$result = [];
