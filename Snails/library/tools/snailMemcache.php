@@ -12,7 +12,7 @@
  * @version:
  */
 namespace Snails\library\tools;
-class snailMemcache extends \Memcache{
+class snailMemcache{
     
 	private $memcache;
 	private $page_cache_key, $page_cache_time, $page_cache_type;
@@ -152,10 +152,6 @@ class snailMemcache extends \Memcache{
 		foreach ($servers as $val) {
 			$this->memcache->addServer($val[0], $val[1]);
 		}
-	}
-	public static function initMemcache($servers)
-	{
-	    
 	}
 }
 ?>

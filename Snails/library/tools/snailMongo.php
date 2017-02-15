@@ -11,7 +11,7 @@
  * @author: zhaozhao911@yahoo.com
  * @version:
  */
-namespace runCron\library\tools;
+namespace Snails\library\tools;
 class snailMongo{
     
 }
