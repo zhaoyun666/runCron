@@ -1,0 +1,10 @@
+Mysql Error Start Date：2017-02-15 10:40:09
+错误号：1064
+最后的错误信息：You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'LIMITs 6' at line 1
+最后mysql执行中的错误列表[{"errno":1064,"sqlstate":"42000","error":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'LIMITs 6' at line 1"}]
+Mysql Error End ----------------------------------------------
+Mysql Error Start Date：2017-02-15 10:40:26
+错误号：1064
+最后的错误信息：You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'LIMITs 6' at line 1
+最后mysql执行中的错误列表[{"errno":1064,"sqlstate":"42000","error":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'LIMITs 6' at line 1"}]
+Mysql Error End ----------------------------------------------

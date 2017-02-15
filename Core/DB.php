@@ -14,9 +14,6 @@ class DB {
 	 */
 	private $_charset = 'utf8';
 	
-	// 数据库配置
-	private $_config = [ ];
-	
 	/*
 	 * 最后一次插入的ID
 	 */
@@ -28,47 +25,270 @@ class DB {
 	 * @var unknown_type
 	 */
 	private $_sql = '';
-	private $db = '';
-	// 数据库连接句柄
-	public $con = null;
-	public $database = null;
 	
-	// 初始化数据库
-	public function initDb($db = "") {
-		$this->db = $db;
-		if ($this->database == null) {
-			$this->database = new DB ();
+	const FETCH_OBJ = 1;
+
+	const FETCH_ASSOC = 2;
+
+	private static $con = null;
+
+	private static $database = null;
+
+	public static function initDb($db = "")
+	{
+		self::connection($db);
+		if (self::$database === null) {
+			self::$database = new DB();
 		}
-		return $this->database;
+		return self::$database;
 	}
-	public function __construct() {
-		$config = Config::getConfig(DB_KEY . '.' . $this->db);
-		self::checkConfig($config);
-		if ($this->con == null) {
-			$this->con = $this->connect ();
+	public function connection($db)
+	{
+		$config = Config::getConfig(DB_KEY . '.' . $db);
+		if (! self::$con) {
+			self::$con = new \mysqli($config['host'], $config['user'], $config['password'], $config['dbName'], $config['port']);
 		}
-		\mysqli_set_charset($this->con, $this->_config['charset'] ?? $this->_charset);
+
+		self::$con->set_charset($config['charset'] ?? $this->_charset);
+		if (self::$con->connect_error) {
+			die("Connect error" .\mysqli_connect_error() . PHP_EOL);
+		}
+	}
+	public function execute($sql)
+	{
+		$this->query($sql);
+		$insertId = self::insertID();
+		return $insertId;
+	}
+	private function query($sql)
+	{
+		$this->_sql = $sql;
+		$query = \mysqli_query(self::$con, $sql);
+		if(!$query){
+			ob_start();
+			echo 'Mysql Error Start Date：' . date("Y-m-d H:i:s") . "\r\n";
+			echo '错误号：' . \mysqli_errno(self::$con) . "\r\n";
+			echo '最后的错误信息：' . \mysqli_error(self::$con) . "\r\n";
+			echo '最后mysql执行中的错误列表' . json_encode(\mysqli_error_list(self::$con)) . "\r\n";
+			echo "Mysql Error End ----------------------------------------------\r\n";
+			$error_log = ob_get_contents();
+			ob_end_clean();
+			self::_halt($error_log);
+			die();
+		}
+		\mysqli_affected_rows(self::$con);
+		return $query;
 	}
 	/**
-	 * 判断config变量
-	 *
-	 * @param unknown_type $config        	
+	 * 数据更新
+	 * @date: 2016-8-21 下午6:01:36
+	 * @author: zhaoce@linewin.cc
 	 */
-	private function checkConfig($config) {
-		foreach ( $config as $key => $value ) {
-			$this->_config [$key] = empty ( $value ) ? $this->_config [$key] : $value;
+	public function updateByField($table, $data, $where)
+	{
+		if(empty($data) || empty($table)) return false;
+		$set = '';
+		foreach($data as $key=>$val){
+			$set .= $key . "='" . $val ."',";
 		}
+		if($set) $set = substr($set, 0, strlen($set) - 1);
+		if($where){
+			if(is_array($where)){
+				foreach($where as $k=>$val){
+					$tmp[] = $k . "='" . $val ."'";
+				}
+				$where = implode(' AND ', $tmp);
+				if($where) $where = 'WHERE ' . $where;
+			}else{
+				$where = ' WHERE ' . $where;
+			}
+		}
+		$update = sprintf('UPDATE %s SET %s %s', $table, $set, $where);
+		 
+		return $this->query($update);
+	}
+	/**
+	 * 数据插入
+	 * @date: 2016-8-21 下午6:21:36
+	 * @author: zhaoce@linewin.cc
+	 */
+	public function insert($table, $data)
+	{
+		if(empty($data) || empty($table)) return false;
+		$field = join(',', array_keys($data));
+		$value = '';
+		foreach($data as $key => $val){
+			$value .= "'" . $val ."',";
+		}
+		if($value) $value = substr($value, 0, strlen($value) - 1);
+		$insert = sprintf('INSERT INTO %s(%s) values(%s)', $table, $field, $value);
+		$this->query($insert);
+		$insertId = self::insertID();
+		self::close();
+		return $insertId;
+	}
+	/**
+	 * @date: 2016-4-21 上午10:16:10
+	 * @author : zhaoce@linewin.cc
+	 * @return : 对某张表进行批量插入数据
+	 */
+	public function multiExecute($table, $data)
+	{
+		// 将insert数据进行组装 批量进入插入操作
+		if (!\is_array($data) || empty($data))
+			return false;
+			$keys = \array_keys($data[0]);
+			$join = "";
+			$k = 0;
+			$sql = sprintf("insert into %s values", join(",", $keys));
+			foreach ($data as $k => $v) {
+				if ($k < 100) {
+					$join .= "('" . join("', '", $data[0]) . "'),";
+					$sql .= $join;
+				} else {
+					$join .= "('" . join("', '", $data[0]) . "');";
+					$sql .= $join;
+					$res = self::execute($sql);
+					$sql = sprintf("insert into %s values", join(",", $keys));
+				}
+				$k ++;
+			}
+			// 生下来一部分sql也要进行执行
+			if (substr($sql, 0, - 1) == ",") {
+				$new_sql = substr($sql, 0, (strlen($sql) - 1));
+				$res = self::execute($new_sql);
+			}
+			self::close();
+			return $res;
 	}
 	/*
-	 * 连接数据库
+	 * 获取多条数据
 	 */
-	private function connect() {
-		return \mysqli_connect( $this->_config ['host'], $this->_config ['user'], $this->_config ['password'], $this->_config['dbName'], $this->_config['port'] ) or die ( '数据库连接失败' . \mysqli_errno ($this->con) );
+	public function fetch($sql, $dataType)
+	{
+		$res = self::query($sql);
+		$result = [];
+		$data = [];
+		while ($row = $this->dataType($dataType, $res)) {
+			$result[] = $row;
+		}
+		mysqli_free_result($res);
+		self::close();
+		return $result;
+	}
+	/*
+	 * 获取一条数据
+	 */
+	public function fetchOne($sql, $dateType)
+	{
+		if(!strpos($sql, "limit") && !strpos($sql, "LIMIT")){
+			$sql = $sql . " LIMIT 1";
+		}
+		$res = self::query($sql);
+		$result = [];
+		while($row=$this->dataType($dataType, $res)){
+			$result = $row;
+		}
+		mysqli_free_result($res);
+		self::close();
+		return $result;
+	}
+	public function dataType($dataType, $result)
+	{
+		switch ($dataType) {
+			case 1:
+				$obj = \mysqli_fetch_object($result);
+				break;
+			case 2:
+				$obj = \mysqli_fetch_assoc($result);
+				break;
+			default:
+				$obj = \mysqli_fetch_array($result);
+				break;
+		}
+		return $obj;
 	}
 	/**
+	 * truncate table
+	 * @param string $table
+	 */
+	public function truncate($table)
+	{
+		\mysqli_query(self::$con, "TRUNCATE TABLE $table");
+		\mysqli_close(self::$con);
+		return \mysqli_error(self::$con);
+	}
+	/**
+	 * Insert ID
+	 * @return int
+	 */
+	public function insertID()
+	{
+		return \mysqli_insert_id(self::$con);
+	}
+	/**
+	 * 获取最后一次执行的sql语句
+	 */
+	private function getLastSql() {
+		return $this->_sql;
+	}
+	/**
+	 * 获取最后一次影响的记录数
+	 * @return type
+	 */
+	public function fetchChangeRow() {
+		return \mysqli_affected_rows ();
+	}
+	/**
+	 * 释放查询结果
+	 */
+	private function free() {
+		\mysqli_free_result ( $this->con );
+	}
+	/**
+	 * 关闭连接
+	 */
+	public function close()
+	{
+		if (self::$con) {
+			\mysqli_close(self::$con);
+		}
+		self::$con = null;
+	}
+	/*
+	 * mysql 错误日志
+	 */
+	private function _halt($log)
+	{
+		global $InitConfig;
+		$filename = $InitConfig['errorPath'] . date ( "Y-m-d" ) . '.log';
+		if (! $fp = fopen ( $filename, 'a+' )) {
+			exit('错误日志打开失败,');
+		}
+		if (fwrite ( $fp, $log ) === FALSE) {
+			exit('错误日志写入失败');
+		}
+		fclose ( $fp );
+	}
+	/**
+	 * 数据数据库所用大小
+	 * @param unknown_type $dbname
+	 * @return unknown
+	 */
+	public function getSqlSize($dbname) {
+		$sql = "SHOW TABLE STATUS from $dbname";
+		$rows = $this->fetch($sql, self::FETCH_ASSOC);
+		$total = 0;
+		foreach ( $rows as $row ) {
+			$total += $row ['Data_length'];
+			$total += $row ['Index_length'];
+		}
+		return round ( $total / (1024 * 1024), 2 );
+	}
+
+	/**
 	 * 将变量的单引号或双引号转义
-	 *
-	 * @param unknown_type $string        	
+	 * @param unknown_type $string
 	 */
 	private function strtag($string1) {
 		if (is_array ( $string1 )) {
@@ -83,8 +303,7 @@ class DB {
 	}
 	/**
 	 * 将数组转化为SQL接受的条件样式
-	 *
-	 * @param unknown_type $array        	
+	 * @param unknown_type $array
 	 */
 	public function chageArray($array) {
 		// MYSQL支持insert into joincart set session_id = 'dddd',product_id='44',number='7',jointime='456465'
@@ -97,53 +316,29 @@ class DB {
 		return $str;
 	}
 	/**
-	 * 执行查询语句
-	 *
-	 * @return bool
+	 * 获取最后一次影响的Id
 	 */
-	public function query($sql) {
-		$this->_sql = $sql;
-		if (! $result = \mysqli_query($this->con, $this->_sql)) {
-			print_r(array(
-					'subject' => date ( "Y-m-d H:i:s" ) . \mysqli_error($this->con),
-					'msg' => \mysqli_error($this->con),
-					'data' => \mysqli_error_list($this->con)
-			));exit();
-		} else {
-			return $result;
-		}
+	public function lastId() {
+		$this->_lastId = \mysqli_insert_id ( self::$con );
+		return $this->_lastId;
 	}
 	/**
-	 * 插入记录
+	 * 获取符合条件的记录数
 	 */
-	public function insert($table, $array) {
-		if (! is_array ( $array ))
-			return false;
-		$array = $this->strtag ( $array ); // 转义
-		$str = '';
-		$val = '';
-		foreach ( $array as $key => $value ) {
-			$str .= ($str != '') ? ",`$key`" : "`$key`";
-			$val .= ($val != '') ? ",'$value'" : "'$value'";
-		}
-		$sql = 'insert into `' . $table . '` (' . $str . ') values(' . $val . ')';
-		if ($this->query ( $sql )) {
-			$this->lastId ();
-			return $this->_lastId ? $this->_lastId : true;
-		} else {
-			return false;
-		}
+	public function fetchNum($sql) {
+		$result = $this->query($sql);
+		$num = \mysqli_num_rows($result);
+		return $num;
 	}
 	/**
 	 * 替换并插入
 	 *
-	 * @param unknown_type $table        	
-	 * @param unknown_type $array        	
+	 * @param unknown_type $table
+	 * @param unknown_type $array
 	 */
 	public function replaceInsert($table, $array) {
-		if (! is_array ( $array ))
-			return false;
-		$array = $this->strtag ( $array ); // 转义
+		if (!is_array($array)) return false;
+		$array = $this->strtag($array); // 转义
 		$str = '';
 		$val = '';
 		foreach ( $array as $key => $value ) {
@@ -157,186 +352,6 @@ class DB {
 		} else {
 			return false;
 		}
-	}
-	/**
-	 * 批量插入记录
-	 *
-	 * @param $table 表名        	
-	 * @param $batchArray 批量数据
-	 *        	,二维数组,健名必需相同,否则不能插入
-	 */
-	public function insertBatch($table, $batchArray) {
-		if (! is_array ( $batchArray ))
-			return false;
-		$str = '';
-		$val = '';
-		$vals = array ();
-		foreach ( $batchArray as $keys => $row ) {
-			if (! is_array ( $row ))
-				return false;
-			foreach ( $row as $key => $value ) {
-				if ($keys == 0)
-					$str .= ($str != '') ? ",`$key`" : "`$key`";
-				$val .= ($val != '') ? ",'$value'" : "'$value'";
-			}
-			$vals [$keys] = '(' . $val . ')';
-			$val = '';
-		}
-		$vals = implode ( ',', $vals );
-		$sql = 'insert into `' . $table . '` (' . $str . ') values ' . $vals;
-		if ($this->query ( $sql )) {
-			$this->lastId ();
-			return $this->_lastId ? $this->_lastId : true;
-		} else {
-			return false;
-		}
-	}
-	/**
-	 * 更新记录
-	 */
-	public function update($table, $array, $where = NULL) {
-		if ($where == NULL) {
-			$sql = 'update `' . $table . '` set ' . $this->chageArray ( $array );
-		} else {
-			$sql = 'update `' . $table . '` set ' . $this->chageArray ( $array ) . ' where ' . $where;
-		}
-		if ($res = $this->query ( $sql )) {
-			return $res;
-		} else {
-			return false;
-		}
-	}
-	/**
-	 * 删除记录
-	 */
-	public function delete($table, $where = NULL) {
-		if ($where == NULL) {
-			$sql = 'delete from `' . $table . '`';
-		} else {
-			$sql = 'delete from `' . $table . '` where ' . $where;
-		}
-		if ($this->query ( $sql )) {
-			return true;
-		} else {
-			return false;
-		}
-	}
-	/**
-	 * 获取一条记录
-	 */
-	public function fetchRow($sql, $cacheTime = 0) {
-		$reult = $this->query ( $sql );
-		$row = \mysqli_fetch_assoc ( $reult );
-		if (! empty ( $row )) {
-			foreach ( $row as $key => $value ) {
-				$row [$key] = \stripslashes ( $value );
-			}
-		}
-		return $row;
-	}
-	/**
-	 * 获取所有记录/用的mysql_fetch_assoc循环
-	 */
-	public function fetchAll($sql) {
-		$result = $this->query ( $sql );
-		if ($result !== false) {
-			$arr = array ();
-			while ( $row = \mysqli_fetch_assoc ( $result ) ) {
-				if (! empty ( $row )) {
-					foreach ( $row as $key => $value ) {
-						$row [$key] = \stripslashes ( $value );
-					}
-				}
-				$arr [] = $row;
-			}
-		} else {
-			return array ();
-		}
-	}
-	/**
-	 * 获取最后一次影响的Id
-	 */
-	public function lastId() {
-		$this->_lastId = \mysqli_insert_id ( $this->_Db );
-		return $this->_lastId;
-	}
-	/**
-	 * 获取符合条件的记录数
-	 */
-	public function fetchNum($sql) {
-		$reult = $this->query ( $sql );
-		$num = \mysqli_num_rows ( $reult );
-		return $num;
-	}
-	/**
-	 * 输出适合的where语句
-	 */
-	private function quoteInto($string, $value) {
-		$value = $this->strtag ( $value );
-		if (\is_numeric ( $value )) {
-			$string = \str_replace ( '?', $value, $string );
-		} else {
-			$string = \str_replace ( '?', "'" . $value . "'", $string );
-		}
-		return $string;
-	}
-	/**
-	 * 数据数据库所用大小
-	 *
-	 * @param unknown_type $dbname        	
-	 * @return unknown
-	 */
-	public function getSqlSize($dbname) {
-		$sql = "SHOW TABLE STATUS from $dbname";
-		$rows = $this->fetchAll ( $sql );
-		$total = 0;
-		foreach ( $rows as $row ) {
-			$total += $row ['Data_length'];
-			$total += $row ['Index_length'];
-		}
-		return round ( $total / (1024 * 1024), 2 );
-	}
-	/**
-	 * 写错误日志
-	 *
-	 * @param unknown_type $log        	
-	 */
-	private function createErrorLog($sql) {
-		$log = array (
-				date ( "Y-m-d H:i:s" ),
-				$sql,
-				mysql_error () 
-		);
-		$log = implode ( ' - ', $log ) . "\r\n";
-		global $InitConfig;
-		$filename = $InitConfig['errorPath'] . date ( "Y-m" ) . '.txt';
-		if (! $fp = fopen ( $filename, 'a+' )) {
-			echo '错误日志打开失败,';
-		}
-		if (fwrite ( $fp, $log ) === FALSE) {
-			echo '错误日志写入失败';
-		}
-		fclose ( $fp );
-	}
-	/**
-	 * 获取最后一次执行的sql语句
-	 */
-	private function getLastSql() {
-		return $this->_sql;
-	}
-	/**
-	 * 获取最后一次影响的记录数
-	 *
-	 * @return type
-	 */
-	public function fetchChangeRow() {
-		return \mysqli_affected_rows ();
-	}
-	/**
-	 * 释放查询结果
-	 */
-	private function free() {
-		\mysqli_free_result ( $this->con );
 	}
 }
 ?>

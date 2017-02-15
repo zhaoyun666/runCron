@@ -7,8 +7,7 @@ class MemberDao extends DB{
 	private $db = 'clw';
 	public function get()
 	{
-		$sql = sprintf('SELECT * FROM %s', $this->table);
-		$this->initDb($this->db);
-		return $this->database;
+		$sql = sprintf('SELECT * FROM %s ORDER BY id DESC LIMIT 6', $this->table);
+		return $this->initDb($this->db)->fetch($sql, self::FETCH_ASSOC);
 	}
 }
