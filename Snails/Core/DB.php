@@ -44,7 +44,7 @@ class DB {
 	}
 	public function connection($db)
 	{
-		$config = Config::getConfig(DB_KEY . '.' . $db);
+		$config = C::getConfig(DB_KEY . '.' . $db);
 		if (! self::$con) {
 			self::$con = new \mysqli($config['host'], $config['user'], $config['password'], $config['dbName'], $config['port']);
 		}

@@ -12,7 +12,7 @@
  * @version:
  */
 namespace Snails\library\tools;
-use Snails\Core\Config;
+use Snails\Core\C;
 
 class snailRedis extends \Redis{
 
@@ -21,7 +21,7 @@ class snailRedis extends \Redis{
         public static function getInstance($path = '')
         {
             if(!self::$instance){
-                $config = Config::getConfig(REDIS_KEY . '.' . $path);
+                $config = C::getConfig(REDIS_KEY . '.' . $path);
                 self::$instance = new snailRedis();
                 self::$instance->connect($config["host"], $config["port"]);
                 if(!self::$instance->ping()){
@@ -30,7 +30,6 @@ class snailRedis extends \Redis{
             }
             return self::$instance;
         }
-    
         public function SunSet($key, $value, $timeout = 0)
         {
             if($timeout){
@@ -38,12 +37,10 @@ class snailRedis extends \Redis{
             }
             return self::set($key, $value);
         }
-    
         public function SunGet($key)
         {
             return self::get($key);
         }
-    
         /**
          * @date: 2016-5-12 下午4:47:39
          * @author: zhaoce@linewin.cc
@@ -53,7 +50,6 @@ class snailRedis extends \Redis{
         {
             return self::hSet($map, $key, $value);
         }
-    
         /**
          * @date: 2016-5-12 下午4:49:00
          * @author: zhaoce@linewin.cc
@@ -66,7 +62,6 @@ class snailRedis extends \Redis{
             }
             return self::hGet($map, $key);
         }
-    
         /**
          * @date: 2016-5-12 下午4:48:16
          * @author: zhaoce@linewin.cc
@@ -76,14 +71,12 @@ class snailRedis extends \Redis{
         {
             return self::rPush($key, $value);
         }
-    
         //使用lua脚本
         public function SunExecute($lua)
         {
             return self::evaluate($lua);
             //return self::evalsha("cdeb6e576b5d6b5debf5d31b19d312c3ab2e2951");
         }
-    
         /**
          * @date: 2016-5-12 下午4:48:30
          * @author: zhaoce@linewin.cc

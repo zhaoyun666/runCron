@@ -1,6 +1,6 @@
 <?php
 namespace Snails\Core;
-class Config{
+class C{
 	
 	public static function getConfig($path): array{
 		global $InitConfig;
