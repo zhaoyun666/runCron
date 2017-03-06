@@ -1,14 +1,12 @@
 <?php
 
 /**
- * Mysql数据库操作类 v2.0
- * 2015.5.6 by Aboc QQ:9986584
- * 增加文件缓存
- *
+ * Mysqli数据库操作类 v1.0
+ * 2015.5.6 by Burgess QQ:605895980
  */
 namespace Snails\Core;
 
-class DB {
+class sunDB {
 	/*
 	 * 编码
 	 */
@@ -38,7 +36,7 @@ class DB {
 	{
 		self::connection($db);
 		if (self::$database === null) {
-			self::$database = new DB();
+			self::$database = new sunDB();
 		}
 		return self::$database;
 	}

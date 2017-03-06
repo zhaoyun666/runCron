@@ -1,9 +1,9 @@
 <?php
 namespace Snails\library\dao\clw2;
-use Snails\Core\DB;
+use Snails\Core\sunDB;
 use Snails\library\tools\snailRedis;
 
-class MemberDao extends DB{
+class MemberDao extends sunDB{
 	private $table = 'car_member';
 	private $db = 'clw';
 	public function get()
